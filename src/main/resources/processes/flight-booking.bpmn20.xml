@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             id="Definitions_flightBooking"
+             targetNamespace="http://ugr.es/dss">
+  <process id="flightBooking" name="Flight booking" isExecutable="true">
+    <startEvent id="start" />
+    <serviceTask id="checkEmployee" name="Check employee" flowable:delegateExpression="${checkEmployee}" />
+    <exclusiveGateway id="auth" default="s4" />
+    <serviceTask id="reject" name="Reject unauthorized" flowable:delegateExpression="${rejectEmployee}" />
+    <endEvent id="end" />
+    <sequenceFlow id="s1" sourceRef="start" targetRef="checkEmployee" />
+    <sequenceFlow id="s2" sourceRef="checkEmployee" targetRef="auth" />
+    <sequenceFlow id="s4" sourceRef="auth" targetRef="reject" />
+    <sequenceFlow id="s3" sourceRef="reject" targetRef="end" />
+    <serviceTask id="quoteIberia" name="Quote Iberia (baseline)" flowable:delegateExpression="${quoteIberia}" />
+    <sequenceFlow id="s5" sourceRef="auth" targetRef="quoteIberia">
+      <conditionExpression xsi:type="tFormalExpression">${authorized}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="s6" sourceRef="quoteIberia" targetRef="end" />
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_flightBooking">
+    <bpmndi:BPMNPlane id="BPMNPlane_flightBooking" bpmnElement="flightBooking">
+      <bpmndi:BPMNShape id="shape_start" bpmnElement="start"><dc:Bounds x="100" y="220" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_checkEmployee" bpmnElement="checkEmployee"><dc:Bounds x="190" y="198" width="130" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_auth" bpmnElement="auth" isMarkerVisible="true"><dc:Bounds x="380" y="213" width="50" height="50" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_reject" bpmnElement="reject"><dc:Bounds x="510" y="100" width="150" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_quoteIberia" bpmnElement="quoteIberia"><dc:Bounds x="510" y="295" width="150" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_end" bpmnElement="end"><dc:Bounds x="765" y="220" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="edge_s1" bpmnElement="s1"><di:waypoint x="136" y="238" /><di:waypoint x="190" y="238" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_s2" bpmnElement="s2"><di:waypoint x="320" y="238" /><di:waypoint x="380" y="238" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_s4" bpmnElement="s4"><di:waypoint x="405" y="213" /><di:waypoint x="405" y="140" /><di:waypoint x="510" y="140" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_s5" bpmnElement="s5"><di:waypoint x="405" y="263" /><di:waypoint x="405" y="335" /><di:waypoint x="510" y="335" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_s3" bpmnElement="s3"><di:waypoint x="660" y="140" /><di:waypoint x="783" y="140" /><di:waypoint x="783" y="220" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_s6" bpmnElement="s6"><di:waypoint x="660" y="335" /><di:waypoint x="783" y="335" /><di:waypoint x="783" y="256" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
