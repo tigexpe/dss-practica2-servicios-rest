@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             id="Definitions_priceNegotiation"
+             targetNamespace="http://ugr.es/dss">
+
+  <!-- Errores de negocio declarados: el errorCode coincide con el BpmnError lanzado en Java -->
+  <error id="ENTRADA_INVALIDA"     errorCode="ENTRADA_INVALIDA" />
+  <error id="SIN_EXISTENCIAS"      errorCode="SIN_EXISTENCIAS" />
+  <error id="PRODUCTO_DESCONOCIDO" errorCode="PRODUCTO_DESCONOCIDO" />
+
+  <process id="priceNegotiation" name="Price negotiation" isExecutable="true">
+
+    <startEvent id="start" />
+
+    <serviceTask id="validateNegotiation" name="Validate input"  flowable:delegateExpression="${validateNegotiation}" />
+    <serviceTask id="checkStock"          name="Check stock"     flowable:delegateExpression="${checkStock}" />
+    <serviceTask id="initNegotiation"     name="Init"            flowable:delegateExpression="${initNegotiation}" />
+    <serviceTask id="buyer"               name="Evaluate buyer"  flowable:delegateExpression="${evaluateBuyer}" />
+
+    <exclusiveGateway id="gAccept"  default="f_toLimit" />
+    <serviceTask id="agreement" name="Build ACUERDO" flowable:delegateExpression="${buildAgreement}" />
+
+    <exclusiveGateway id="gLimit"   default="f_toNext" />
+    <serviceTask id="maxRondas" name="Build MAX_RONDAS" flowable:delegateExpression="${buildMaxRondas}" />
+
+    <serviceTask id="nextOffer" name="Next offer" flowable:delegateExpression="${nextOffer}" />
+
+    <exclusiveGateway id="gStalled" default="f_toApply" />
+    <serviceTask id="stalled"   name="Build PRECIO_ESTANCADO" flowable:delegateExpression="${buildStalled}" />
+
+    <serviceTask id="applyOffer" name="Apply offer" flowable:delegateExpression="${applyOffer}" />
+
+    <endEvent id="end" />
+
+    <!-- Eventos de error de borde: capturan los BpmnError y llevan a un final de ERROR limpio -->
+    <boundaryEvent id="be_invalid" attachedToRef="validateNegotiation">
+      <errorEventDefinition errorRef="ENTRADA_INVALIDA" />
+    </boundaryEvent>
+    <boundaryEvent id="be_nostock" attachedToRef="checkStock">
+      <errorEventDefinition errorRef="SIN_EXISTENCIAS" />
+    </boundaryEvent>
+    <boundaryEvent id="be_unknown" attachedToRef="checkStock">
+      <errorEventDefinition errorRef="PRODUCTO_DESCONOCIDO" />
+    </boundaryEvent>
+
+    <!-- Flujo principal -->
+    <sequenceFlow id="f1" sourceRef="start"              targetRef="validateNegotiation" />
+    <sequenceFlow id="f2" sourceRef="validateNegotiation" targetRef="checkStock" />
+    <sequenceFlow id="f3" sourceRef="checkStock"         targetRef="initNegotiation" />
+    <sequenceFlow id="f4" sourceRef="initNegotiation"    targetRef="buyer" />
+    <sequenceFlow id="f5" sourceRef="buyer"              targetRef="gAccept" />
+
+    <!-- ¿Acepta? -->
+    <sequenceFlow id="f_accept" sourceRef="gAccept" targetRef="agreement">
+      <conditionExpression xsi:type="tFormalExpression">${aceptable}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="f_toLimit" sourceRef="gAccept" targetRef="gLimit" />
+    <sequenceFlow id="f_agreeEnd" sourceRef="agreement" targetRef="end" />
+
+    <!-- ¿Límite de rondas alcanzado? -->
+    <sequenceFlow id="f_limit" sourceRef="gLimit" targetRef="maxRondas">
+      <conditionExpression xsi:type="tFormalExpression">${ronda &gt;= maxRondas}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="f_toNext" sourceRef="gLimit" targetRef="nextOffer" />
+    <sequenceFlow id="f_maxEnd" sourceRef="maxRondas" targetRef="end" />
+
+    <!-- ¿Precio estancado? -->
+    <sequenceFlow id="f_next_stalled" sourceRef="nextOffer" targetRef="gStalled" />
+    <sequenceFlow id="f_stalled" sourceRef="gStalled" targetRef="stalled">
+      <conditionExpression xsi:type="tFormalExpression">${precioNuevo == precioActual}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="f_toApply" sourceRef="gStalled" targetRef="applyOffer" />
+    <sequenceFlow id="f_stalledEnd" sourceRef="stalled" targetRef="end" />
+
+    <!-- Retorno del bucle: aplicar nuevo precio y volver a evaluar al comprador -->
+    <sequenceFlow id="f_loop" sourceRef="applyOffer" targetRef="buyer" />
+
+    <!-- Salidas de los errores capturados -->
+    <sequenceFlow id="fe_invalid" sourceRef="be_invalid" targetRef="end" />
+    <sequenceFlow id="fe_nostock" sourceRef="be_nostock" targetRef="end" />
+    <sequenceFlow id="fe_unknown" sourceRef="be_unknown" targetRef="end" />
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_priceNegotiation">
+    <bpmndi:BPMNPlane id="BPMNPlane_priceNegotiation" bpmnElement="priceNegotiation">
+      <bpmndi:BPMNShape id="s_start" bpmnElement="start"><dc:Bounds x="100" y="232" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_validate" bpmnElement="validateNegotiation"><dc:Bounds x="170" y="210" width="120" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_checkStock" bpmnElement="checkStock"><dc:Bounds x="330" y="210" width="120" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_init" bpmnElement="initNegotiation"><dc:Bounds x="490" y="210" width="120" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_buyer" bpmnElement="buyer"><dc:Bounds x="650" y="210" width="120" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_gAccept" bpmnElement="gAccept" isMarkerVisible="true"><dc:Bounds x="810" y="225" width="50" height="50" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_agreement" bpmnElement="agreement"><dc:Bounds x="785" y="390" width="130" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_gLimit" bpmnElement="gLimit" isMarkerVisible="true"><dc:Bounds x="910" y="225" width="50" height="50" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_maxRondas" bpmnElement="maxRondas"><dc:Bounds x="885" y="390" width="130" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_nextOffer" bpmnElement="nextOffer"><dc:Bounds x="1010" y="210" width="120" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_gStalled" bpmnElement="gStalled" isMarkerVisible="true"><dc:Bounds x="1180" y="225" width="50" height="50" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_stalled" bpmnElement="stalled"><dc:Bounds x="1155" y="390" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_applyOffer" bpmnElement="applyOffer"><dc:Bounds x="1280" y="210" width="120" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_end" bpmnElement="end"><dc:Bounds x="1500" y="232" width="36" height="36" /></bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="s_be_invalid" bpmnElement="be_invalid"><dc:Bounds x="212" y="272" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_be_nostock" bpmnElement="be_nostock"><dc:Bounds x="348" y="272" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_be_unknown" bpmnElement="be_unknown"><dc:Bounds x="408" y="272" width="36" height="36" /></bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="e_f1" bpmnElement="f1"><di:waypoint x="136" y="250" /><di:waypoint x="170" y="250" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f2" bpmnElement="f2"><di:waypoint x="290" y="250" /><di:waypoint x="330" y="250" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f3" bpmnElement="f3"><di:waypoint x="450" y="250" /><di:waypoint x="490" y="250" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f4" bpmnElement="f4"><di:waypoint x="610" y="250" /><di:waypoint x="650" y="250" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f5" bpmnElement="f5"><di:waypoint x="770" y="250" /><di:waypoint x="810" y="250" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f_accept" bpmnElement="f_accept"><di:waypoint x="835" y="275" /><di:waypoint x="835" y="390" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f_toLimit" bpmnElement="f_toLimit"><di:waypoint x="860" y="250" /><di:waypoint x="910" y="250" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f_agreeEnd" bpmnElement="f_agreeEnd"><di:waypoint x="915" y="430" /><di:waypoint x="1518" y="430" /><di:waypoint x="1518" y="268" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f_limit" bpmnElement="f_limit"><di:waypoint x="935" y="275" /><di:waypoint x="935" y="390" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f_toNext" bpmnElement="f_toNext"><di:waypoint x="960" y="250" /><di:waypoint x="1010" y="250" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f_maxEnd" bpmnElement="f_maxEnd"><di:waypoint x="1015" y="430" /><di:waypoint x="1518" y="430" /><di:waypoint x="1518" y="268" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f_next_stalled" bpmnElement="f_next_stalled"><di:waypoint x="1130" y="250" /><di:waypoint x="1180" y="250" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f_stalled" bpmnElement="f_stalled"><di:waypoint x="1205" y="275" /><di:waypoint x="1205" y="390" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f_toApply" bpmnElement="f_toApply"><di:waypoint x="1230" y="250" /><di:waypoint x="1280" y="250" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f_stalledEnd" bpmnElement="f_stalledEnd"><di:waypoint x="1225" y="470" /><di:waypoint x="1518" y="470" /><di:waypoint x="1518" y="268" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_f_loop" bpmnElement="f_loop"><di:waypoint x="1340" y="210" /><di:waypoint x="1340" y="140" /><di:waypoint x="710" y="140" /><di:waypoint x="710" y="210" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_fe_invalid" bpmnElement="fe_invalid"><di:waypoint x="230" y="308" /><di:waypoint x="230" y="540" /><di:waypoint x="1518" y="540" /><di:waypoint x="1518" y="268" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_fe_nostock" bpmnElement="fe_nostock"><di:waypoint x="366" y="308" /><di:waypoint x="366" y="560" /><di:waypoint x="1518" y="560" /><di:waypoint x="1518" y="268" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_fe_unknown" bpmnElement="fe_unknown"><di:waypoint x="426" y="308" /><di:waypoint x="426" y="580" /><di:waypoint x="1518" y="580" /><di:waypoint x="1518" y="268" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

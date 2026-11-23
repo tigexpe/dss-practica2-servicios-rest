@@ -10,33 +10,56 @@
   <process id="flightBooking" name="Flight booking" isExecutable="true">
     <startEvent id="start" />
     <serviceTask id="checkEmployee" name="Check employee" flowable:delegateExpression="${checkEmployee}" />
-    <exclusiveGateway id="auth" default="s4" />
+    <exclusiveGateway id="auth" default="f_reject" />
     <serviceTask id="reject" name="Reject unauthorized" flowable:delegateExpression="${rejectEmployee}" />
+
+    <parallelGateway id="split" />
+    <serviceTask id="quoteIberia" name="Quote Iberia" flowable:delegateExpression="${quoteIberia}" />
+    <serviceTask id="quoteVueling" name="Quote Vueling" flowable:delegateExpression="${quoteVueling}" />
+    <parallelGateway id="join" />
+    <serviceTask id="chooseOffer" name="Choose offer" flowable:delegateExpression="${chooseOffer}" />
+
     <endEvent id="end" />
-    <sequenceFlow id="s1" sourceRef="start" targetRef="checkEmployee" />
-    <sequenceFlow id="s2" sourceRef="checkEmployee" targetRef="auth" />
-    <sequenceFlow id="s4" sourceRef="auth" targetRef="reject" />
-    <sequenceFlow id="s3" sourceRef="reject" targetRef="end" />
-    <serviceTask id="quoteIberia" name="Quote Iberia (baseline)" flowable:delegateExpression="${quoteIberia}" />
-    <sequenceFlow id="s5" sourceRef="auth" targetRef="quoteIberia">
+
+    <sequenceFlow id="f_start"      sourceRef="start"        targetRef="checkEmployee" />
+    <sequenceFlow id="f_check"      sourceRef="checkEmployee" targetRef="auth" />
+    <sequenceFlow id="f_reject"     sourceRef="auth"         targetRef="reject" />
+    <sequenceFlow id="f_rejectEnd"  sourceRef="reject"       targetRef="end" />
+    <sequenceFlow id="f_auth"       sourceRef="auth"         targetRef="split">
       <conditionExpression xsi:type="tFormalExpression">${authorized}</conditionExpression>
     </sequenceFlow>
-    <sequenceFlow id="s6" sourceRef="quoteIberia" targetRef="end" />
+    <sequenceFlow id="f_split_ib"   sourceRef="split"        targetRef="quoteIberia" />
+    <sequenceFlow id="f_split_vy"   sourceRef="split"        targetRef="quoteVueling" />
+    <sequenceFlow id="f_ib_join"    sourceRef="quoteIberia"  targetRef="join" />
+    <sequenceFlow id="f_vy_join"    sourceRef="quoteVueling" targetRef="join" />
+    <sequenceFlow id="f_join_choose" sourceRef="join"        targetRef="chooseOffer" />
+    <sequenceFlow id="f_choose_end" sourceRef="chooseOffer"  targetRef="end" />
   </process>
+
   <bpmndi:BPMNDiagram id="BPMNDiagram_flightBooking">
     <bpmndi:BPMNPlane id="BPMNPlane_flightBooking" bpmnElement="flightBooking">
-      <bpmndi:BPMNShape id="shape_start" bpmnElement="start"><dc:Bounds x="100" y="220" width="36" height="36" /></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="shape_checkEmployee" bpmnElement="checkEmployee"><dc:Bounds x="190" y="198" width="130" height="80" /></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="shape_auth" bpmnElement="auth" isMarkerVisible="true"><dc:Bounds x="380" y="213" width="50" height="50" /></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="shape_reject" bpmnElement="reject"><dc:Bounds x="510" y="100" width="150" height="80" /></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="shape_quoteIberia" bpmnElement="quoteIberia"><dc:Bounds x="510" y="295" width="150" height="80" /></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="shape_end" bpmnElement="end"><dc:Bounds x="765" y="220" width="36" height="36" /></bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="edge_s1" bpmnElement="s1"><di:waypoint x="136" y="238" /><di:waypoint x="190" y="238" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="edge_s2" bpmnElement="s2"><di:waypoint x="320" y="238" /><di:waypoint x="380" y="238" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="edge_s4" bpmnElement="s4"><di:waypoint x="405" y="213" /><di:waypoint x="405" y="140" /><di:waypoint x="510" y="140" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="edge_s5" bpmnElement="s5"><di:waypoint x="405" y="263" /><di:waypoint x="405" y="335" /><di:waypoint x="510" y="335" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="edge_s3" bpmnElement="s3"><di:waypoint x="660" y="140" /><di:waypoint x="783" y="140" /><di:waypoint x="783" y="220" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="edge_s6" bpmnElement="s6"><di:waypoint x="660" y="335" /><di:waypoint x="783" y="335" /><di:waypoint x="783" y="256" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="shape_start" bpmnElement="start"><dc:Bounds x="100" y="240" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_checkEmployee" bpmnElement="checkEmployee"><dc:Bounds x="190" y="218" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_auth" bpmnElement="auth" isMarkerVisible="true"><dc:Bounds x="390" y="233" width="50" height="50" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_reject" bpmnElement="reject"><dc:Bounds x="500" y="90" width="150" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_split" bpmnElement="split"><dc:Bounds x="510" y="233" width="50" height="50" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_quoteIberia" bpmnElement="quoteIberia"><dc:Bounds x="620" y="150" width="150" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_quoteVueling" bpmnElement="quoteVueling"><dc:Bounds x="620" y="330" width="150" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_join" bpmnElement="join"><dc:Bounds x="840" y="233" width="50" height="50" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_chooseOffer" bpmnElement="chooseOffer"><dc:Bounds x="940" y="218" width="150" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="shape_end" bpmnElement="end"><dc:Bounds x="1160" y="240" width="36" height="36" /></bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="edge_f_start" bpmnElement="f_start"><di:waypoint x="136" y="258" /><di:waypoint x="190" y="258" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_f_check" bpmnElement="f_check"><di:waypoint x="330" y="258" /><di:waypoint x="390" y="258" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_f_reject" bpmnElement="f_reject"><di:waypoint x="415" y="233" /><di:waypoint x="415" y="130" /><di:waypoint x="500" y="130" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_f_rejectEnd" bpmnElement="f_rejectEnd"><di:waypoint x="650" y="130" /><di:waypoint x="1178" y="130" /><di:waypoint x="1178" y="240" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_f_auth" bpmnElement="f_auth"><di:waypoint x="440" y="258" /><di:waypoint x="510" y="258" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_f_split_ib" bpmnElement="f_split_ib"><di:waypoint x="535" y="233" /><di:waypoint x="535" y="190" /><di:waypoint x="620" y="190" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_f_split_vy" bpmnElement="f_split_vy"><di:waypoint x="535" y="283" /><di:waypoint x="535" y="370" /><di:waypoint x="620" y="370" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_f_ib_join" bpmnElement="f_ib_join"><di:waypoint x="770" y="190" /><di:waypoint x="865" y="190" /><di:waypoint x="865" y="233" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_f_vy_join" bpmnElement="f_vy_join"><di:waypoint x="770" y="370" /><di:waypoint x="865" y="370" /><di:waypoint x="865" y="283" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_f_join_choose" bpmnElement="f_join_choose"><di:waypoint x="890" y="258" /><di:waypoint x="940" y="258" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="edge_f_choose_end" bpmnElement="f_choose_end"><di:waypoint x="1090" y="258" /><di:waypoint x="1160" y="258" /></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </definitions>
